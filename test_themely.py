@@ -319,6 +319,24 @@ def test_prompt():
     assert vals["blue_bg"] == ";".join(map(str, expect)), vals
 
 
+def test_spotify():
+    calls = []
+    t.run = lambda *cmd: calls.append(cmd)
+    t.has = lambda cmd: cmd == "spicetify"
+    p = t.palette("#50c87c")
+    t.spotify(p, 0.8)
+    ini = (HOME / ".config/spicetify/Themes/themely/color.ini").read_text()
+    assert ini.startswith("[themely]\n") and f"button = {p['accent'][1:]}\n" in ini and f"main = {p['bg'][1:]}\n" in ini, ini
+    assert (HOME / ".config/spicetify/Themes/themely/user.css").exists()
+    assert ("spicetify", "config", "current_theme", "themely", "color_scheme", "themely") in calls
+    assert ("spicetify", "refresh") in calls
+    calls.clear()
+    t.has = lambda cmd: False
+    t.spotify(p, 0.8)  # not installed: nothing runs
+    assert calls == []
+    t.run = lambda *cmd: None
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1
