@@ -319,24 +319,67 @@ def vesktop(p, o):
     }))
 
 
+def gsetting(key):
+    return subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", key],
+                          capture_output=True, text=True).stdout.strip()
+
+
+COLOR = re.compile(r"#([0-9a-fA-F]{6})\b|(rgba?\()(\d+),\s*(\d+),\s*(\d+)")
+
+
+def recolor(css, p):
+    """Shift a compiled theme's literal colors: blues → accent hue, grays → theme-tinted grays, same lightness."""
+    ah, _, asat = hls(p["accent"])
+    tint = min(asat, 0.25)
+
+    def shift(hexc):
+        h, l, s = hls(hexc)
+        if s < 0.12:
+            return from_hls(ah, l, tint)
+        if 0.52 < h < 0.70:  # the base theme's blue accent family
+            return from_hls(ah, l, s)
+        return hexc  # reds/greens/yellows keep their meaning
+
+    def sub(m):
+        if m.group(1):
+            return shift("#" + m.group(1))
+        new = shift("#%02x%02x%02x" % tuple(int(m.group(i)) for i in (3, 4, 5)))
+        return m.group(2) + ", ".join(str(int(new[i:i + 2], 16)) for i in (1, 3, 5))
+    return COLOR.sub(sub, css)
+
+
+def base_css(version):
+    """GTK's built-in dark theme (compiled CSS with literal colors), read from the GTK library's resources."""
+    path = {"3.0": "/org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css",
+            "4.0": "/org/gtk/libgtk/theme/Default/Default-dark.css"}[version]
+    code = (f"import gi, sys; gi.require_version('Gtk', '{version}'); from gi.repository import Gtk, Gio; "
+            f"sys.stdout.write(Gio.resources_lookup_data('{path}', 0).get_data().decode())")
+    return subprocess.run(["python3", "-c", code], capture_output=True, text=True, check=True).stdout
+
+
 def gtk(p, o):
-    body = GENERATED + "".join(f"@define-color {k} {p[v]};\n" for k, v in {
+    """A generated GTK theme; flipping gtk-theme between two slots makes running GTK apps reload it live."""
+    defines = "".join(f"@define-color {k} {p[v]};\n" for k, v in {
         "accent_color": "accent", "accent_bg_color": "accent", "accent_fg_color": "bg",
         "window_bg_color": "bg", "view_bg_color": "bg", "headerbar_bg_color": "surface0",
-        "card_bg_color": "surface0", "theme_bg_color": "bg", "theme_base_color": "bg",
-        "theme_fg_color": "fg", "theme_text_color": "fg", "theme_selected_bg_color": "accent",
+        "card_bg_color": "surface0", "popover_bg_color": "surface0", "theme_bg_color": "bg",
+        "theme_base_color": "bg", "theme_fg_color": "fg", "theme_text_color": "fg",
+        "theme_selected_bg_color": "accent", "theme_selected_fg_color": "bg",
+        "borders": "surface1", "unfocused_borders": "surface1",
     }.items())
-    imp = "@import 'themely.css';\n"
+    slot = "Themely-b" if gsetting("gtk-theme") == "'Themely-a'" else "Themely-a"
+    root = HOME / ".local/share/themes" / slot
+    write(root / "index.theme", f"[Desktop Entry]\nType=X-GNOME-Metatheme\nName={slot}\n\n[X-GNOME-Metatheme]\nGtkTheme={slot}\n")
     for d in ("gtk-3.0", "gtk-4.0"):
-        write(CFG / d / "themely.css", body)
+        write(root / d / "gtk.css", recolor(base_css(d[4:]), p) + "\n" + GENERATED + defines)
+        # The old static approach imported colors from ~/.config; that would pin stale colors over the live theme.
         user = CFG / d / "gtk.css"
-        if user.is_symlink():  # e.g. linked into an installed theme: not ours to edit
-            raise ValueError(f"{user} is a symlink; add {imp.strip()} to it yourself")
-        text = user.read_text() if user.exists() else ""
-        if text.startswith(GENERATED):  # written by an older themely: all ours
-            text = ""
-        if not text.startswith(imp):
-            write(user, imp + text)
+        if user.exists() and not user.is_symlink() and "@import 'themely.css';\n" in user.read_text():
+            rest = user.read_text().replace("@import 'themely.css';\n", "")
+            user.unlink() if not rest.strip() else write(user, rest)
+        (CFG / d / "themely.css").unlink(missing_ok=True)
+    run("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark")
+    run("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", slot)
 
 
 def set_keys(path, section, keys):

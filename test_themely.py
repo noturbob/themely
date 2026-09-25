@@ -99,6 +99,8 @@ def jsonc(text):
 def test_apply():
     t.run = lambda *cmd: None  # don't signal the real desktop
     t.has = lambda cmd: False  # behave the same whatever is installed here
+    t.gsetting = lambda key: "'Adwaita'"
+    t.base_css = lambda version: "window { background: #202020; }\n"
     t.TARGETS = [x for x in t.TARGETS if x[0] != "wallpaper"]
     cfg = HOME / ".config"
     files = {
@@ -133,7 +135,7 @@ def test_apply():
     assert "@name themely" in (cfg / "vesktop/themes/themely.css").read_text()
     assert "--zen-primary-color: #89b4fa" in (prof / "chrome/userChrome.css").read_text()
     assert "legacyUserProfileCustomizations" in (prof / "user.js").read_text()
-    assert (cfg / "gtk-4.0/gtk.css").exists()
+    assert (HOME / ".local/share/themes/Themely-a/gtk-4.0/gtk.css").exists()
     assert t.current_slug() == slug
 
     # Re-apply: nothing changes, backup still holds the pre-themely file.
@@ -161,27 +163,57 @@ def test_wrong_shape_theme_json():
         shutil.rmtree(t.THEMES / slug)
 
 
-def test_gtk_keeps_user_css():
+def test_recolor():
+    p = t.palette("#50c87c")
+    ah = t.hls(p["accent"])[0]
+    css = t.recolor("a { color: #15539e; background: #202020; border-color: rgba(21, 83, 158, 0.5); "
+                    "outline-color: #e01b24; }", p)
+    blue, gray = re.findall(r"#[0-9a-f]{6}", css)[:2]
+    assert abs(t.hls(blue)[0] - ah) < 0.02 and abs(t.hls(blue)[1] - t.hls("#15539e")[1]) < 0.02, blue
+    assert abs(t.hls(gray)[0] - ah) < 0.02 and abs(t.hls(gray)[1] - t.hls("#202020")[1]) < 0.02, gray
+    r, g, b = map(int, re.search(r"rgba\((\d+), (\d+), (\d+), 0.5\)", css).groups())
+    assert abs(t.hls("#%02x%02x%02x" % (r, g, b))[0] - ah) < 0.02, css
+    assert "#e01b24" in css  # red keeps its meaning
+
+
+def test_gtk_live_theme():
+    calls = []
+    t.run = lambda *cmd: calls.append(cmd)
+    state = {"gtk-theme": "'Adwaita'"}
+    t.gsetting = lambda key: state[key]
+    t.base_css = lambda version: "window { background: #202020; color: #15539e; }\n"
     gtk3 = HOME / ".config/gtk-3.0"
     gtk3.mkdir(parents=True, exist_ok=True)
-    (gtk3 / "gtk.css").write_text("window { padding: 3px; }\n")
+    # Left over from the old static approach: the import goes, the user's own rules stay.
+    (gtk3 / "gtk.css").write_text("@import 'themely.css';\nwindow { padding: 3px; }\n")
+    (gtk3 / "themely.css").write_text("stale\n")
     p = t.palette("#89b4fa")
     t.gtk(p, 0.8)
-    t.gtk(p, 0.8)  # idempotent: one import line
-    css = (gtk3 / "gtk.css").read_text()
-    assert css == "@import 'themely.css';\nwindow { padding: 3px; }\n", css
-    assert "@define-color accent_color #89b4fa;" in (gtk3 / "themely.css").read_text()
-    # A gtk.css themely generated earlier is replaced by just the import.
-    (gtk3 / "gtk.css").write_text(t.GENERATED + "@define-color accent_color #000000;\n")
+    assert (gtk3 / "gtk.css").read_text() == "window { padding: 3px; }\n"
+    assert not (gtk3 / "themely.css").exists()
+    themes = HOME / ".local/share/themes"
+    css = (themes / "Themely-a/gtk-3.0/gtk.css").read_text()
+    assert "#202020" not in css and "#15539e" not in css and css.startswith("window {"), css
+    assert "@define-color theme_selected_bg_color #89b4fa;" in css
+    assert (themes / "Themely-a/gtk-4.0/gtk.css").exists() and (themes / "Themely-a/index.theme").exists()
+    assert ("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", "Themely-a") in calls
+    assert ("gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark") in calls
+    # Next switch flips to the other slot: a changed theme name is what makes running GTK apps reload.
+    state["gtk-theme"] = "'Themely-a'"
+    t.gtk(t.palette("#50c87c"), 0.8)
+    assert ("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", "Themely-b") in calls
+    assert "#50c87c" in (themes / "Themely-b/gtk-3.0/gtk.css").read_text()
+    # A gtk.css that was only our import disappears; a symlinked one is never touched.
+    (gtk3 / "gtk.css").write_text("@import 'themely.css';\n")
     t.gtk(p, 0.8)
-    assert (gtk3 / "gtk.css").read_text() == "@import 'themely.css';\n"
-    # A symlinked gtk.css belongs to someone else: fail loudly, don't write through it.
+    assert not (gtk3 / "gtk.css").exists()
     other = HOME / "theme-owned.css"
-    other.write_text("/* theme */\n")
-    (gtk3 / "gtk.css").unlink()
+    other.write_text("@import 'themely.css';\n")
     (gtk3 / "gtk.css").symlink_to(other)
-    raises(ValueError, t.gtk, p, 0.8)
-    assert other.read_text() == "/* theme */\n"
+    t.gtk(p, 0.8)
+    assert other.read_text() == "@import 'themely.css';\n"
+    (gtk3 / "gtk.css").unlink()
+    t.run = lambda *cmd: None
 
 
 def test_qt():
