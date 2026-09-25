@@ -45,6 +45,15 @@ ShellRoot {
         }
     }
 
+    // Animated switch from scripts: qs -c themely ipc call theme apply <slug>
+    IpcHandler {
+        target: "theme"
+        function apply(slug: string): void {
+            const s = Quickshell.screens.find(s => s.name === root.focusedOutput) ?? Quickshell.screens[0]
+            reveal.start(slug, s.x + s.width / 2, s.y + s.height / 2)
+        }
+    }
+
     IpcHandler {
         target: "dashboard"
         function toggle(): void { root.dashboardOpen = !root.dashboardOpen }
@@ -61,10 +70,10 @@ ShellRoot {
         }
     }
 
-    // Reveal {
-    //     id: reveal
-    //     onFinished: root.refresh()
-    // }
+    Reveal {
+        id: reveal
+        onFinished: root.refresh()
+    }
 
     // LazyLoader {
     //     active: root.dashboardOpen
