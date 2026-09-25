@@ -81,6 +81,75 @@ def test_store():
     assert "ocean-blue-2" not in {x["slug"] for x in t.list_themes()}
 
 
+def test_replace_block():
+    text = "a\n  // >>> themely x\n  old\n  // <<< themely\nb\n"
+    out = t.replace_block(text, "x", "  new", c="//")
+    assert out == "a\n  // >>> themely x\n  new\n  // <<< themely\nb\n", out
+    assert t.replace_block(out, "x", "  new\n", c="//") == out
+    two = "# >>> themely a\n# <<< themely\nmid\n# >>> themely b\n# <<< themely\n"
+    assert t.replace_block(two, "b", "B\n") == "# >>> themely a\n# <<< themely\nmid\n# >>> themely b\nB\n# <<< themely\n"
+    raises(ValueError, t.replace_block, "no markers\n", "x", "y\n")
+
+
+def jsonc(text):
+    text = re.sub(r"^\s*//.*$", "", text, flags=re.M)
+    return json.loads(re.sub(r",(\s*[}\]])", r"\1", text))
+
+
+def test_apply():
+    t.run = lambda *cmd: None  # don't signal the real desktop
+    t.TARGETS = [x for x in t.TARGETS if x[0] != "wallpaper"]
+    cfg = HOME / ".config"
+    files = {
+        "niri/config.kdl": "layout {\n    // >>> themely border\n    // <<< themely\n}\n// >>> themely opacity\n// <<< themely\n",
+        "kitty/kitty.conf": "font_size 15\n# >>> themely colors\n# <<< themely\n",
+        "flowbar/config.ini": "[theme]\n# >>> themely colors\n# <<< themely\npreset = x\n",
+        "mako/config": "width=300\n# >>> themely colors\n# <<< themely\n",
+        "fuzzel/fuzzel.ini": "[colors]\n# >>> themely colors\n# <<< themely\n[border]\nwidth=2\n",
+        "Code/User/settings.json": '{\n  // >>> themely colors\n  // <<< themely\n  "b": [1,],\n}\n',
+        "zen/profiles.ini": "[Install1]\nDefault=abc.default\n",
+    }
+    for rel, text in files.items():
+        (cfg / rel).parent.mkdir(parents=True, exist_ok=True)
+        (cfg / rel).write_text(text)
+    (cfg / "vesktop").mkdir()
+    prof = cfg / "zen/abc.default"
+    prof.mkdir()
+
+    slug = t.save("Test", wallpaper=str(image("apply.png", "-size", "40x40", "xc:#89b4fa")), accent="#89b4fa", opacity=0.8)
+    assert t.apply(slug) == []
+    niri = (cfg / "niri/config.kdl").read_text()
+    assert 'active-color "#89b4fa"' in niri and "opacity 0.8" in niri
+    assert "background_opacity 0.8" in (cfg / "kitty/kitty.conf").read_text()
+    assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
+    assert "background-color=" in (cfg / "mako/config").read_text()
+    assert "[border]\nwidth=2" in (cfg / "fuzzel/fuzzel.ini").read_text()
+    vs = jsonc((cfg / "Code/User/settings.json").read_text())
+    assert vs["workbench.colorCustomizations"]["focusBorder"] == "#89b4fa" and vs["b"] == [1]
+    assert "@name themely" in (cfg / "vesktop/themes/themely.css").read_text()
+    assert "--zen-primary-color: #89b4fa" in (prof / "chrome/userChrome.css").read_text()
+    assert "legacyUserProfileCustomizations" in (prof / "user.js").read_text()
+    assert (cfg / "gtk-4.0/gtk.css").exists()
+    assert t.current_slug() == slug
+
+    # Re-apply: nothing changes, backup still holds the pre-themely file.
+    kitty = (cfg / "kitty/kitty.conf").read_text()
+    assert t.apply(slug) == [] and (cfg / "kitty/kitty.conf").read_text() == kitty
+    assert (cfg / "kitty/kitty.conf.themely-bak").read_text() == files["kitty/kitty.conf"]
+
+    # Missing markers fail only that target; missing apps are skipped.
+    (cfg / "mako/config").write_text("no markers\n")
+    (cfg / "fuzzel/fuzzel.ini").unlink()
+    assert t.apply(slug) == ["mako"]
+    raises(ValueError, t.delete, slug)
+
+
+def test_cli():
+    assert t.main(["palette", "#89b4fa"]) == 0
+    assert t.main(["apply", "nope"]) == 1
+    assert t.main(["save", "--name", "x", "--opacity", "5"]) == 1
+
+
 if __name__ == "__main__":
     try:
         for name, fn in list(globals().items()):
