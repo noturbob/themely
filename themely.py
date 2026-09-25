@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """themely: wallpaper-driven theme engine. Spec: docs/superpowers/specs/2026-09-25-themely-design.md"""
 import colorsys
+import json
 import os
 import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 HOME = Path(os.environ.get("THEMELY_HOME") or Path.home())
@@ -80,3 +83,71 @@ def swatches(image):
         l, s = 0.65, max(s, 0.4)
     auto = from_hls(h, min(max(l, 0.55), 0.80), s)
     return [auto] + [c for _, c in found if c != auto]
+
+
+# ---------- theme store ----------
+
+def slugify(name):
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "theme"
+
+
+def theme_dir(slug):
+    if not SLUG.match(slug or ""):
+        raise ValueError(f"bad theme id: {slug!r}")
+    d = THEMES / slug
+    if not (d / "theme.json").exists():
+        raise ValueError(f"no such theme: {slug}")
+    return d
+
+
+def current_slug():
+    return CURRENT.resolve().name if CURRENT.exists() else None
+
+
+def list_themes():
+    cur = current_slug()
+    out = []
+    for f in THEMES.glob("*/theme.json"):
+        try:
+            t = json.loads(f.read_text())
+        except (OSError, ValueError) as e:
+            print(f"themely: skipping {f.parent.name}: {e}", file=sys.stderr)
+            continue
+        slug = f.parent.name
+        out.append({**t, "slug": slug, "wallpaper": str(f.parent / "wallpaper"), "current": slug == cur})
+    return sorted(out, key=lambda t: t["name"].lower())
+
+
+def save(name, wallpaper=None, accent=None, opacity=0.85, slug=None):
+    """Create (no slug) or update (slug) a theme. Validates everything before touching disk."""
+    name = name.strip()
+    if not name:
+        raise ValueError("name is required")
+    if not 0.3 <= opacity <= 1:
+        raise ValueError("opacity must be between 0.3 and 1")
+    if slug:
+        d = theme_dir(slug)
+    else:
+        slug = base = slugify(name)
+        n = 2
+        while (THEMES / slug).exists():
+            slug, n = f"{base}-{n}", n + 1
+        d = THEMES / slug
+    wp = d / "wallpaper"
+    src = Path(wallpaper).expanduser() if wallpaper else wp
+    if not src.is_file():
+        raise ValueError(f"wallpaper not found: {wallpaper}" if wallpaper else "wallpaper is required")
+    accent = norm_hex(accent) if accent else swatches(src)[0]
+    d.mkdir(parents=True, exist_ok=True)
+    if src.resolve() != wp.resolve():
+        shutil.copyfile(src, wp)
+    theme = {"name": name, "accent": accent, "opacity": round(opacity, 2)}
+    (d / "theme.json").write_text(json.dumps(theme, indent=2) + "\n")
+    return slug
+
+
+def delete(slug):
+    d = theme_dir(slug)
+    if slug == current_slug():
+        raise ValueError("can't delete the active theme, switch to another one first")
+    shutil.rmtree(d)
