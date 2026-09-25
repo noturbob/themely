@@ -335,6 +335,67 @@ def gtk(p, o):
             write(user, imp + text)
 
 
+def set_keys(path, section, keys):
+    """Set `key=value` lines in a QSettings-style ini, keeping every other line (the owning tool rewrites it too)."""
+    text = path.read_text() if path.exists() else ""
+    header = f"[{section}]\n"
+    if header not in text:
+        text = (text.rstrip("\n") + "\n\n" if text.strip() else "") + header
+    start = text.index(header) + len(header)
+    end = text.find("\n[", start)
+    end = len(text) if end == -1 else end + 1
+    body = text[start:end]  # keys are only unique within a section
+    for k, v in keys.items():
+        line = f"{k}={v}"
+        body, n = re.subn(rf"^{re.escape(k)}=.*$", lambda m: line, body, count=1, flags=re.M)
+        if not n:
+            body = line + "\n" + body
+    write(path, text[:start] + body + text[end:])
+
+
+def qt(p, o):
+    """qt5ct/qt6ct palette; both watch their config dir, so running Qt apps recolor live."""
+    c = {k: "#ff" + v[1:] for k, v in p.items()}
+    # QPalette role order: WindowText Button Light Midlight Dark Mid Text BrightText ButtonText Base Window
+    # Shadow Highlight HighlightedText Link LinkVisited AlternateBase NoRole ToolTipBase ToolTipText PlaceholderText
+    active = [c["fg"], c["surface0"], c["overlay"], c["surface1"], c["bg"], c["surface1"], c["fg"], "#ffffffff",
+              c["fg"], c["bg"], c["bg"], "#ff000000", c["accent"], c["bg"], c["accent"], c["accent2"],
+              c["surface0"], c["bg"], c["surface0"], c["fg"], "#80" + p["fg_muted"][1:]]
+    disabled = [c["overlay"] if i in (0, 6, 8, 13) else col for i, col in enumerate(active)]
+    body = "[ColorScheme]\n" + "".join(
+        f"{name}_colors={', '.join(cols)}\n"
+        for name, cols in (("active", active), ("disabled", disabled), ("inactive", active)))
+    for tool in ("qt5ct", "qt6ct"):
+        colors = CFG / tool / "themely-colors.conf"  # in the watched dir itself, so a change triggers a reload
+        write(colors, body)
+        set_keys(CFG / tool / f"{tool}.conf", "Appearance",
+                 {"color_scheme_path": str(colors), "custom_palette": "true"})
+    # KDE apps (Dolphin, ...) paint from kdeglobals' color groups on top of the Qt palette; empty = Breeze Light.
+    rgb = {k: ",".join(str(int(v[i:i + 2], 16)) for i in (1, 3, 5)) for k, v in p.items()}
+    scheme = "[General]\nName=Themely\n"
+    for group, (bg, alt, fg) in {
+        "View": ("bg", "surface0", "fg"), "Window": ("bg", "surface0", "fg"),
+        "Button": ("surface0", "surface1", "fg"), "Selection": ("accent", "accent2", "bg"),
+        "Tooltip": ("surface0", "surface1", "fg"), "Complementary": ("bg", "surface0", "fg"),
+        "Header": ("bg", "surface0", "fg"),
+    }.items():
+        keys = {
+            "BackgroundNormal": rgb[bg], "BackgroundAlternate": rgb[alt],
+            "ForegroundNormal": rgb[fg], "ForegroundActive": rgb[fg], "ForegroundInactive": rgb["fg_muted"],
+            "ForegroundLink": rgb["accent"], "ForegroundVisited": rgb["accent2"],
+            "ForegroundNegative": rgb["color1"], "ForegroundNeutral": rgb["color3"], "ForegroundPositive": rgb["color2"],
+            "DecorationFocus": rgb["accent"], "DecorationHover": rgb["accent"],
+        }
+        set_keys(CFG / "kdeglobals", f"Colors:{group}", keys)
+        scheme += f"\n[Colors:{group}]\n" + "".join(f"{k}={v}\n" for k, v in keys.items())
+    # KF6 apps otherwise pick Breeze Light/Dark from the portal's dark-mode flag and ignore the groups above.
+    write(HOME / ".local/share/color-schemes/Themely.colors", scheme)
+    set_keys(CFG / "kdeglobals", "UiSettings", {"ColorScheme": "Themely"})
+    # Tell running KDE apps the palette changed (what plasma-apply-colorscheme does).
+    run("dbus-send", "--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange",
+        "int32:0", "int32:0")
+
+
 PREF = 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n'
 
 
@@ -383,7 +444,7 @@ def wallpaper(p, o):
 
 
 TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel),
-           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("browsers", browsers),
+           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers),
            ("wallpaper", wallpaper)]
 
 

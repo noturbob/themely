@@ -183,6 +183,47 @@ def test_gtk_keeps_user_css():
     assert other.read_text() == "/* theme */\n"
 
 
+def test_qt():
+    qt5 = HOME / ".config/qt5ct"
+    qt5.mkdir(parents=True, exist_ok=True)
+    (qt5 / "qt5ct.conf").write_text("[Appearance]\ncolor_scheme_path=/usr/share/qt5ct/colors/darker.conf\n"
+                                    "custom_palette=false\nstyle=Fusion\n\n[Fonts]\nfixed=x\n")
+    p = t.palette("#89b4fa")
+    t.qt(p, 0.8)
+    t.qt(p, 0.8)
+    conf5 = (qt5 / "qt5ct.conf").read_text()
+    assert conf5 == (f"[Appearance]\ncolor_scheme_path={qt5}/themely-colors.conf\n"
+                     "custom_palette=true\nstyle=Fusion\n\n[Fonts]\nfixed=x\n"), conf5
+    # qt6ct had no config: created, pointing at its own copy of the palette.
+    conf6 = (HOME / ".config/qt6ct/qt6ct.conf").read_text()
+    assert f"color_scheme_path={HOME}/.config/qt6ct/themely-colors.conf" in conf6 and "custom_palette=true" in conf6
+    colors = (HOME / ".config/qt6ct/themely-colors.conf").read_text()
+    active = re.search(r"^active_colors=(.*)$", colors, re.M).group(1).split(", ")
+    assert len(active) == 21 and active[12] == "#ff89b4fa" and active[10] == "#ff" + p["bg"][1:], active
+
+
+def test_kde_colors():
+    kg = HOME / ".config/kdeglobals"
+    kg.write_text("[KFileDialog Settings]\nAllow Expansion=false\n")
+    p = t.palette("#89b4fa")
+    t.qt(p, 0.8)
+    t.qt(p, 0.8)
+    text = kg.read_text()
+    assert text.startswith("[KFileDialog Settings]\nAllow Expansion=false\n"), text
+    assert text.count("[Colors:View]") == 1
+    rgb = lambda h: ",".join(str(int(h[i:i + 2], 16)) for i in (1, 3, 5))
+    view = text[text.index("[Colors:View]"):].split("\n\n")[0]
+    assert f"BackgroundNormal={rgb(p['bg'])}" in view and f"DecorationFocus={rgb(p['accent'])}" in view, view
+    sel = text[text.index("[Colors:Selection]"):].split("\n\n")[0]
+    assert f"BackgroundNormal={rgb(p['accent'])}" in sel, sel
+    # KF6 apps (Dolphin) ignore kdeglobals colors unless a named scheme is selected.
+    assert "[UiSettings]\nColorScheme=Themely" in text, text
+    scheme = (HOME / ".local/share/color-schemes/Themely.colors").read_text()
+    assert scheme.startswith("[General]\nName=Themely\n"), scheme
+    sview = scheme[scheme.index("[Colors:View]"):].split("\n\n")[0]
+    assert f"BackgroundNormal={rgb(p['bg'])}" in sview and f"DecorationFocus={rgb(p['accent'])}" in sview, sview
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1
