@@ -498,6 +498,31 @@ def pywalfox(p, o):
         run("pywalfox", "update")
 
 
+def btop(p, o):
+    if not (CFG / "btop").exists():
+        return
+    grad = {"cpu": ("accent", "accent2", "color1"), "temp": ("accent", "accent2", "color1"),
+            "used": ("accent", "accent2", "color1"), "process": ("accent", "accent2", "color1"),
+            "free": ("color2", "accent", "accent2"), "cached": ("accent2", "accent", "fg"),
+            "available": ("color2", "accent2", "accent"), "download": ("accent", "accent2", "fg"),
+            "upload": ("accent2", "accent", "fg")}
+    theme = {"main_bg": "bg", "main_fg": "fg", "title": "fg", "hi_fg": "accent", "selected_bg": "surface1",
+             "selected_fg": "accent", "inactive_fg": "overlay", "graph_text": "fg_muted", "meter_bg": "surface1",
+             "proc_misc": "accent2", "cpu_box": "overlay", "mem_box": "overlay", "net_box": "overlay",
+             "proc_box": "overlay", "div_line": "surface1"}
+    for name, (a, b, c) in grad.items():
+        theme.update({f"{name}_start": a, f"{name}_mid": b, f"{name}_end": c})
+    write(CFG / "btop/themes/themely.theme", "".join(f'theme[{k}]="{p[v]}"\n' for k, v in theme.items()))
+    conf = CFG / "btop/btop.conf"
+    text = conf.read_text() if conf.exists() else ""
+    for k, v in {"color_theme": '"themely"', "theme_background": "False"}.items():  # no bg: kitty's opacity shows
+        text, n = re.subn(rf"^{k}\s*=.*$", lambda m: f"{k} = {v}", text, count=1, flags=re.M)
+        if not n:
+            text += f"{k} = {v}\n"
+    write(conf, text)
+    run("pkill", "-USR2", "-x", "btop")  # btop reloads its config on SIGUSR2
+
+
 def wallpaper(p, o):
     old = subprocess.run(["pgrep", "-x", "swaybg"], capture_output=True, text=True).stdout.split()
     subprocess.Popen(["swaybg", "-i", str(CURRENT / "wallpaper"), "-m", "fill"], start_new_session=True,
@@ -511,7 +536,7 @@ def wallpaper(p, o):
 
 
 TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel),
-           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox),
+           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox), ("btop", btop),
            ("wallpaper", wallpaper)]
 
 

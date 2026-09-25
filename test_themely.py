@@ -287,6 +287,22 @@ def test_vscode_forks():
     assert vs["workbench.colorCustomizations"]["focusBorder"] == "#50c87c" and vs["workbench.colorTheme"] == "Tokyo Night"
 
 
+def test_btop():
+    conf = HOME / ".config/btop/btop.conf"
+    conf.parent.mkdir(parents=True, exist_ok=True)
+    conf.write_text('color_theme = "Default"\ntheme_background = True\nupdate_ms = 2000\n')
+    p = t.palette("#50c87c")
+    t.btop(p, 0.8)
+    t.btop(p, 0.8)
+    text = conf.read_text()
+    assert text == 'color_theme = "themely"\ntheme_background = False\nupdate_ms = 2000\n', text
+    theme = (HOME / ".config/btop/themes/themely.theme").read_text()
+    assert f'theme[hi_fg]="{p["accent"]}"' in theme and f'theme[main_fg]="{p["fg"]}"' in theme, theme
+    conf.unlink()
+    t.btop(p, 0.8)  # no config yet (btop writes it on exit): created with just our keys
+    assert 'color_theme = "themely"' in conf.read_text()
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1
