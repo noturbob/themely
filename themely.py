@@ -298,7 +298,13 @@ def vscode(p, o):
         "editor.selectionBackground": a + "40", "selection.background": a + "66",
     }
     body = json.dumps(colors, indent=2).replace("\n", "\n  ")
-    edit(CFG / "Code/User/settings.json", {"colors": f'  "workbench.colorCustomizations": {body},\n'}, c="//")
+    for app in ("Code", "Antigravity", "VSCodium", "Cursor"):  # VS Code and its forks share the format
+        path = CFG / app / "User/settings.json"
+        if path.exists() and ">>> themely colors" not in path.read_text():
+            text = path.read_text()
+            i = text.index("{") + 1
+            write(path, text[:i] + "\n  // >>> themely colors\n  // <<< themely" + text[i:])
+        edit(path, {"colors": f'  "workbench.colorCustomizations": {body},\n'}, c="//")
 
 
 def vesktop(p, o):

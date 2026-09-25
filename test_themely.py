@@ -273,6 +273,20 @@ def test_pywalfox():
     assert "--toolbar-bgcolor" not in (prof / "chrome/userChrome.css").read_text()
 
 
+def test_vscode_forks():
+    # Forks share the settings format; markers are added on first run instead of by hand.
+    ag = HOME / ".config/Antigravity/User/settings.json"
+    ag.parent.mkdir(parents=True, exist_ok=True)
+    ag.write_text('{\n  "workbench.colorTheme": "Tokyo Night",\n}\n')
+    p = t.palette("#50c87c")
+    t.vscode(p, 0.8)
+    t.vscode(p, 0.8)
+    text = ag.read_text()
+    assert text.count(">>> themely colors") == 1, text
+    vs = jsonc(text)
+    assert vs["workbench.colorCustomizations"]["focusBorder"] == "#50c87c" and vs["workbench.colorTheme"] == "Tokyo Night"
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1
