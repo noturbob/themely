@@ -98,6 +98,7 @@ def jsonc(text):
 
 def test_apply():
     t.run = lambda *cmd: None  # don't signal the real desktop
+    t.has = lambda cmd: False  # behave the same whatever is installed here
     t.TARGETS = [x for x in t.TARGETS if x[0] != "wallpaper"]
     cfg = HOME / ".config"
     files = {
@@ -222,6 +223,22 @@ def test_kde_colors():
     assert scheme.startswith("[General]\nName=Themely\n"), scheme
     sview = scheme[scheme.index("[Colors:View]"):].split("\n\n")[0]
     assert f"BackgroundNormal={rgb(p['bg'])}" in sview and f"DecorationFocus={rgb(p['accent'])}" in sview, sview
+
+
+def test_pywalfox():
+    p = t.palette("#50c87c")
+    t.pywalfox(p, 0.8)
+    data = json.loads((HOME / ".cache/wal/colors.json").read_text())
+    colors = list(data["colors"].values())
+    # Pywalfox reads colors in order: 0 = browser background, 1/2 = accents, 15 = text.
+    assert len(colors) == 16 and colors[0] == p["bg"] and colors[1] == p["accent"] and colors[15] == p["fg"], colors
+    assert data["wallpaper"] == str(t.CURRENT / "wallpaper") and data["special"]["background"] == p["bg"]
+    # With Pywalfox present, startup-only userChrome overrides would pin stale colors over its live ones.
+    prof = HOME / ".config/zen/abc.default"
+    t.has = lambda cmd: True
+    t.browsers(p, 0.8)
+    t.has = lambda cmd: False
+    assert "--toolbar-bgcolor" not in (prof / "chrome/userChrome.css").read_text()
 
 
 def test_cli():

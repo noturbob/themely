@@ -204,6 +204,10 @@ def edit(path, blocks, c="#"):
     write(path, text)
 
 
+def has(cmd):
+    return shutil.which(cmd) is not None
+
+
 def run(*cmd):
     # Non-zero exit is fine ("not running"); a missing binary raises and fails the target.
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -410,10 +414,11 @@ def browser_profiles():
 
 def browsers(p, o):
     """Applies on the next browser start (userChrome.css isn't live)."""
+    live = has("pywalfox")  # Pywalfox themes live; stale !important overrides would fight it
     for prof in set(browser_profiles()):
         if not prof.is_dir():
             continue
-        write(prof / "chrome/userChrome.css", GENERATED + css(":root", {
+        write(prof / "chrome/userChrome.css", GENERATED + ("" if live else css(":root", {
             "--toolbar-bgcolor": p["bg"], "--toolbar-color": p["fg"],
             "--lwt-accent-color": p["bg"], "--lwt-text-color": p["fg"],
             "--tab-selected-bgcolor": p["surface0"],
@@ -424,11 +429,24 @@ def browsers(p, o):
             "--zen-primary-color": p["accent"], "--zen-colors-primary": p["surface0"],
             "--zen-colors-secondary": p["surface1"], "--zen-colors-tertiary": p["bg"],
             "--zen-colors-border": p["accent"], "--zen-main-browser-background": p["bg"],
-        }))
+        })))
         userjs = prof / "user.js"
         text = userjs.read_text() if userjs.exists() else ""
         if PREF not in text:
             write(userjs, text + PREF)
+
+
+def pywalfox(p, o):
+    """Live Firefox/Zen theming through the Pywalfox add-on, which reads pywal's colors.json."""
+    order = ["bg", "accent", "accent2", "color2", "color3", "color5", "color6", "fg_muted",
+             "overlay", "accent", "accent2", "color2", "color3", "color5", "color6", "fg"]
+    write(HOME / ".cache/wal/colors.json", json.dumps({
+        "wallpaper": str(CURRENT / "wallpaper"),
+        "special": {"background": p["bg"], "foreground": p["fg"], "cursor": p["accent"]},
+        "colors": {f"color{i}": p[k] for i, k in enumerate(order)},
+    }, indent=2) + "\n")
+    if has("pywalfox"):
+        run("pywalfox", "update")
 
 
 def wallpaper(p, o):
@@ -444,7 +462,7 @@ def wallpaper(p, o):
 
 
 TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel),
-           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers),
+           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox),
            ("wallpaper", wallpaper)]
 
 
