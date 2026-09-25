@@ -108,12 +108,22 @@ def current_slug():
     return CURRENT.resolve().name if CURRENT.exists() else None
 
 
+def load(path):
+    """Read a theme.json; ValueError unless it is a well-formed theme."""
+    t = json.loads(path.read_text())
+    if not (isinstance(t, dict) and isinstance(t.get("name"), str) and t["name"].strip()
+            and isinstance(t.get("accent"), str) and HEX.match(t["accent"])
+            and isinstance(t.get("opacity"), (int, float)) and 0.3 <= t["opacity"] <= 1):
+        raise ValueError(f"not a valid theme: {path}")
+    return t
+
+
 def list_themes():
     cur = current_slug()
     out = []
     for f in THEMES.glob("*/theme.json"):
         try:
-            t = json.loads(f.read_text())
+            t = load(f)
         except (OSError, ValueError) as e:
             print(f"themely: skipping {f.parent.name}: {e}", file=sys.stderr)
             continue
@@ -313,8 +323,17 @@ def gtk(p, o):
         "card_bg_color": "surface0", "theme_bg_color": "bg", "theme_base_color": "bg",
         "theme_fg_color": "fg", "theme_text_color": "fg", "theme_selected_bg_color": "accent",
     }.items())
+    imp = "@import 'themely.css';\n"
     for d in ("gtk-3.0", "gtk-4.0"):
-        write(CFG / d / "gtk.css", body)
+        write(CFG / d / "themely.css", body)
+        user = CFG / d / "gtk.css"
+        if user.is_symlink():  # e.g. linked into an installed theme: not ours to edit
+            raise ValueError(f"{user} is a symlink; add {imp.strip()} to it yourself")
+        text = user.read_text() if user.exists() else ""
+        if text.startswith(GENERATED):  # written by an older themely: all ours
+            text = ""
+        if not text.startswith(imp):
+            write(user, imp + text)
 
 
 PREF = 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n'
@@ -371,7 +390,7 @@ TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako
 
 def apply(slug):
     d = theme_dir(slug)
-    theme = json.loads((d / "theme.json").read_text())
+    theme = load(d / "theme.json")
     p, o = palette(theme["accent"]), theme["opacity"]
     tmp = DATA / ".current-tmp"
     tmp.unlink(missing_ok=True)

@@ -144,6 +144,42 @@ def test_apply():
     raises(ValueError, t.delete, slug)
 
 
+def test_wrong_shape_theme_json():
+    # Parses as JSON but isn't a theme: skipped by list, clean error from apply.
+    for slug, text in {"empty": "{}", "arr": "[]", "badname": '{"name": 5, "accent": "#123456", "opacity": 0.8}',
+                       "noopacity": '{"name": "n", "accent": "#123456"}'}.items():
+        (t.THEMES / slug).mkdir()
+        (t.THEMES / slug / "theme.json").write_text(text)
+    slugs = {x["slug"] for x in t.list_themes()}
+    assert not slugs & {"empty", "arr", "badname", "noopacity"}, slugs
+    raises(ValueError, t.apply, "noopacity")
+    for slug in ("empty", "arr", "badname", "noopacity"):
+        shutil.rmtree(t.THEMES / slug)
+
+
+def test_gtk_keeps_user_css():
+    gtk3 = HOME / ".config/gtk-3.0"
+    gtk3.mkdir(parents=True, exist_ok=True)
+    (gtk3 / "gtk.css").write_text("window { padding: 3px; }\n")
+    p = t.palette("#89b4fa")
+    t.gtk(p, 0.8)
+    t.gtk(p, 0.8)  # idempotent: one import line
+    css = (gtk3 / "gtk.css").read_text()
+    assert css == "@import 'themely.css';\nwindow { padding: 3px; }\n", css
+    assert "@define-color accent_color #89b4fa;" in (gtk3 / "themely.css").read_text()
+    # A gtk.css themely generated earlier is replaced by just the import.
+    (gtk3 / "gtk.css").write_text(t.GENERATED + "@define-color accent_color #000000;\n")
+    t.gtk(p, 0.8)
+    assert (gtk3 / "gtk.css").read_text() == "@import 'themely.css';\n"
+    # A symlinked gtk.css belongs to someone else: fail loudly, don't write through it.
+    other = HOME / "theme-owned.css"
+    other.write_text("/* theme */\n")
+    (gtk3 / "gtk.css").unlink()
+    (gtk3 / "gtk.css").symlink_to(other)
+    raises(ValueError, t.gtk, p, 0.8)
+    assert other.read_text() == "/* theme */\n"
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1

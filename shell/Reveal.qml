@@ -7,7 +7,7 @@ import QtQuick.Effects
 // freeze every output → apply under the frozen frame → grow a hole from the picked card.
 Scope {
     id: reveal
-    property string phase: "idle"   // idle → wait → capture → apply → grow
+    property string phase: "idle"   // idle → wait → capture → apply → settle → grow
     property string slug: ""
     property point origin: Qt.point(0, 0)
     property int captured: 0
@@ -27,10 +27,20 @@ Scope {
         captureTimeout.stop()
         phase = "apply"
         apply.running = true
+        applyTimeout.start()
+    }
+    // Leave the apply phase exactly once, however the process ended (or didn't).
+    function applyDone(message) {
+        if (phase !== "apply") return
+        phase = "settle"
+        applyTimeout.stop()
+        if (message) Quickshell.execDetached(["notify-send", "-a", "themely", "Some apps didn't switch", message])
+        settle.start()
     }
 
     Timer { id: unmapDelay; interval: 90; onTriggered: { reveal.phase = "capture"; captureTimeout.start() } }
     Timer { id: captureTimeout; interval: 800; onTriggered: reveal.runApply() }  // never hang on a stuck screencopy
+    Timer { id: applyTimeout; interval: 6000; onTriggered: reveal.applyDone("themely apply timed out") }
     Timer { id: settle; interval: 250; onTriggered: { reveal.phase = "grow"; done.start() } }
     Timer { id: done; interval: 760; onTriggered: { reveal.phase = "idle"; reveal.finished() } }
 
@@ -38,11 +48,9 @@ Scope {
         id: apply
         command: ["themely", "apply", reveal.slug]
         stderr: StdioCollector { id: err }
-        onExited: code => {
-            if (code !== 0)
-                Quickshell.execDetached(["notify-send", "-a", "themely", "Some apps didn't switch", err.text])
-            settle.start()
-        }
+        onExited: code => reveal.applyDone(code !== 0 ? err.text || "themely apply failed" : "")
+        // A binary that never starts emits no exited signal.
+        onRunningChanged: if (!running) Qt.callLater(() => reveal.applyDone("themely apply could not run"))
     }
 
     Variants {
@@ -57,6 +65,7 @@ Scope {
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "themely-reveal"
+            mask: Region {}  // click-through: a stuck overlay must never eat input
 
             // Origin on this output, clamped: other outputs grow from their nearest edge point.
             readonly property real ox: Math.max(0, Math.min(width, reveal.origin.x - modelData.x))
