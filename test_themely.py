@@ -303,6 +303,19 @@ def test_btop():
     assert 'color_theme = "themely"' in conf.read_text()
 
 
+def test_prompt():
+    p = t.palette("#50c87c")
+    t.prompt(p, 0.8)
+    text = (HOME / ".cache/themely/prompt.sh").read_text()
+    vals = dict(re.findall(r"(\w+)='([\d;]+)'", text))
+    assert set(vals) == {"lav", "lav_bg", "blue", "blue_bg", "sap", "sap_bg"}, text
+    rgb = lambda h: [int(h[i:i + 2], 16) for i in (1, 3, 5)]
+    assert vals["blue"] == ";".join(map(str, rgb(p["accent"])))
+    # *_bg = accent blended 30% into the background (same recipe as the hand-made Catppuccin prompt)
+    expect = [round(0.3 * a + 0.7 * b) for a, b in zip(rgb(p["accent"]), rgb(p["bg"]))]
+    assert vals["blue_bg"] == ";".join(map(str, expect)), vals
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1
