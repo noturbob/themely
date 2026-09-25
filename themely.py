@@ -441,9 +441,12 @@ def qt(p, o):
         }
         set_keys(CFG / "kdeglobals", f"Colors:{group}", keys)
         scheme += f"\n[Colors:{group}]\n" + "".join(f"{k}={v}\n" for k, v in keys.items())
-    # KF6 apps otherwise pick Breeze Light/Dark from the portal's dark-mode flag and ignore the groups above.
+    # Selectable as "Themely" in KDE apps' color menus. Not pinned: a pin (UiSettings/ColorScheme) makes KDE apps
+    # apply it once at launch, while unpinned they follow kdeglobals live through plasma-integration.
     write(HOME / ".local/share/color-schemes/Themely.colors", scheme)
-    set_keys(CFG / "kdeglobals", "UiSettings", {"ColorScheme": "Themely"})
+    kg = CFG / "kdeglobals"
+    if "[UiSettings]\nColorScheme=Themely\n" in kg.read_text():  # pin written by an older themely
+        write(kg, re.sub(r"\n*\[UiSettings\]\nColorScheme=Themely\n", "\n", kg.read_text()))
     # Tell running KDE apps the palette changed (what plasma-apply-colorscheme does).
     run("dbus-send", "--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange",
         "int32:0", "int32:0")

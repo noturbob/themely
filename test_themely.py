@@ -249,8 +249,11 @@ def test_kde_colors():
     assert f"BackgroundNormal={rgb(p['bg'])}" in view and f"DecorationFocus={rgb(p['accent'])}" in view, view
     sel = text[text.index("[Colors:Selection]"):].split("\n\n")[0]
     assert f"BackgroundNormal={rgb(p['accent'])}" in sel, sel
-    # KF6 apps (Dolphin) ignore kdeglobals colors unless a named scheme is selected.
-    assert "[UiSettings]\nColorScheme=Themely" in text, text
+    # A pinned scheme makes KDE apps apply it once at launch and never live-update: never pin, and unpin old ones.
+    assert "UiSettings" not in text, text
+    kg.write_text(text + "\n[UiSettings]\nColorScheme=Themely\n")
+    t.qt(p, 0.8)
+    assert "UiSettings" not in kg.read_text(), kg.read_text()
     scheme = (HOME / ".local/share/color-schemes/Themely.colors").read_text()
     assert scheme.startswith("[General]\nName=Themely\n"), scheme
     sview = scheme[scheme.index("[Colors:View]"):].split("\n\n")[0]
