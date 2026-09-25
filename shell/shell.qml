@@ -75,12 +75,12 @@ ShellRoot {
         onFinished: root.refresh()
     }
 
-    // LazyLoader {
-    //     active: root.dashboardOpen
-    //     Dashboard {
-    //         themes: root.themes
-    //         onDismissed: root.dashboardOpen = false
-    //         onEdited: root.refresh()
-    //     }
-    // }
+    LazyLoader {
+        active: root.dashboardOpen
+        Dashboard {
+            themes: root.themes
+            onDismissed: root.dashboardOpen = false
+            onEdited: root.refresh()
+        }
+    }
 }
