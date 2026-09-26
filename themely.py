@@ -208,6 +208,15 @@ def has(cmd):
     return shutil.which(cmd) is not None
 
 
+def running(name):
+    return subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0
+
+
+def launch(*cmd):
+    """Start an app detached from themely, so it outlives the apply."""
+    subprocess.Popen(cmd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def run(*cmd):
     # Non-zero exit is fine ("not running"); a missing binary raises and fails the target.
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -552,8 +561,15 @@ def spotify(p, o):
     write(d / "user.css", GENERATED)
     run("spicetify", "config", "current_theme", "themely", "color_scheme", "themely")
     run("spicetify", "refresh")
-    if subprocess.run(["pgrep", "-x", "spotify"], capture_output=True).returncode == 0:
-        run("spicetify", "restart")  # Spotify only reads theme colors at start
+    if running("spotify"):  # Spotify only reads theme colors at start
+        # Not `spicetify restart`: it runs the bare binary, skipping ~/.config/spotify-flags.conf that the
+        # `spotify` launcher reads, and without those Wayland flags Spotify exits at once on niri.
+        run("pkill", "-x", "spotify")
+        for _ in range(50):  # a second Spotify hands off to one still shutting down, then exits
+            if not running("spotify"):
+                break
+            time.sleep(0.1)
+        launch("spotify")
 
 
 # The whole command line of a slat daemon, nothing more: SIGUSR1 kills any other process it reaches.

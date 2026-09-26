@@ -330,6 +330,19 @@ def test_spotify():
     assert (HOME / ".config/spicetify/Themes/themely/user.css").exists()
     assert ("spicetify", "config", "current_theme", "themely", "color_scheme", "themely") in calls
     assert ("spicetify", "refresh") in calls
+    # Open Spotify restarts through the `spotify` launcher: `spicetify restart` runs the bare binary without
+    # ~/.config/spotify-flags.conf, and on a Wayland-only session that Spotify exits at once.
+    launched = []
+    t.launch = lambda *cmd: launched.append(cmd)
+    states = iter([True, True, False])  # open; still shutting down; gone
+    t.running = lambda name: name == "spotify" and next(states, False)
+    calls.clear()
+    t.spotify(p, 0.8)
+    assert ("spicetify", "restart") not in calls and ("pkill", "-x", "spotify") in calls and launched == [("spotify",)], (calls, launched)
+    t.running = lambda name: False
+    launched.clear()
+    t.spotify(p, 0.8)
+    assert launched == []  # closed Spotify stays closed
     calls.clear()
     t.has = lambda cmd: False
     t.spotify(p, 0.8)  # not installed: nothing runs
