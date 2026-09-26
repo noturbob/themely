@@ -21,10 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch the film from the media release
+      - name: Fetch the film and the README GIF from the media release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download media --repo "$GITHUB_REPOSITORY" --pattern themely.mp4 --dir site
+        # Pages serves them with real media types; release downloads are octet-stream,
+        # which GitHub's README image proxy refuses.
+        run: gh release download media --repo "$GITHUB_REPOSITORY" --pattern themely.mp4 --pattern demo.gif --dir site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
