@@ -9,6 +9,10 @@ Spotify, btop and your shell prompt all follow the new theme, most of them live,
 
 A small dashboard creates, edits and deletes themes.
 
+![themely switching between four themes](media/demo.gif)
+
+▶ [Watch the full 31-second film (1080p, 60fps)](media/themely.mp4)
+
 ---
 
 ## Contents
