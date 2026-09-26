@@ -9,9 +9,9 @@ Spotify, btop and your shell prompt all follow the new theme, most of them live,
 
 A small dashboard creates, edits and deletes themes.
 
-![themely switching between four themes](media/demo.gif)
+![themely switching between four themes](https://noturbob.github.io/themely/demo.gif)
 
-▶ [Watch the full 31-second film (1080p, 60fps)](media/themely.mp4)
+▶ [Watch the full 31-second film (1080p, 60fps)](https://noturbob.github.io/themely/themely.mp4)
 
 [Website](https://noturbob.github.io/themely/) · [Install](#install) · [Usage](#usage) · [Troubleshooting](#troubleshooting)
 
@@ -378,4 +378,5 @@ touch the real desktop.
   test.
 - **Palette keys:** `accent accent2 bg surface0 surface1 overlay fg fg_muted color0…color15`.
 
-Design notes live in `docs/superpowers/`.
+The website and design notes live on the [`website`](https://github.com/noturbob/themely/tree/website) branch, and the demo
+media in the [`media`](https://github.com/noturbob/themely/releases/tag/media) release, so a clone of `main` holds only the app.
