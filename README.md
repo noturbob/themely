@@ -13,6 +13,8 @@ A small dashboard creates, edits and deletes themes.
 
 ▶ [Watch the full 31-second film (1080p, 60fps)](media/themely.mp4)
 
+[Website](https://noturbob.github.io/themely/) · [Install](#install) · [Usage](#usage) · [Troubleshooting](#troubleshooting)
+
 ---
 
 ## Contents

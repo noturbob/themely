@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-theme="death-bloom">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>themely — re-theme your whole niri desktop from your wallpaper</title>
+  <meta name="description" content="One keybind re-themes your whole Linux desktop from your wallpaper: niri, kitty, GTK, KDE, VS Code, Firefox, Discord and Spotify, live, with a circular reveal.">
+  <meta property="og:title" content="themely">
+  <meta property="og:description" content="One keybind re-themes your whole niri desktop from your wallpaper.">
+  <meta property="og:image" content="poster.jpg">
+  <meta name="theme-color" content="#291919">
+  <style>
+    @font-face { font-family: "Archivo Black"; src: url("fonts/archivo-black-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 400 600; font-display: swap; }
+    @font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+    /* Palettes are themely's own output for the four themes in the film. */
+    :root, [data-theme="death-bloom"] { --bg: #291919; --surface: #3d2424; --line: #503030; --fg: #eed3d3; --muted: #d59090; --accent: #ff1a1b; --on-accent: #1a0f0f; }
+    [data-theme="mocha-blue"] { --bg: #191f29; --surface: #242e3d; --line: #303c50; --fg: #d3ddee; --muted: #90aad5; --accent: #89b4fa; --on-accent: #111722; }
+    [data-theme="nebula"]     { --bg: #19291f; --surface: #243d2d; --line: #30503c; --fg: #d3eedd; --muted: #90d5a9; --accent: #50c87c; --on-accent: #0f1a13; }
+    [data-theme="whiskers"]   { --bg: #29271a; --surface: #3b3926; --line: #4e4b31; --fg: #eeebd3; --muted: #d5cd90; --accent: #c4c0a2; --on-accent: #1a1911; }
+
+    * { box-sizing: border-box; margin: 0; }
+    html { background: var(--bg); color: var(--fg); }
+    body { font: 400 1.125rem/1.6 "Hanken Grotesk", system-ui, sans-serif; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+    .wrap { width: min(1180px, 100% - 2 * clamp(20px, 4vw, 48px)); margin-inline: auto; }
+
+    header.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 28px; }
+    .mark { font-family: "Archivo Black"; font-size: 1.6rem; letter-spacing: -0.03em; text-decoration: none; display: inline-flex; flex-direction: column; gap: 5px; }
+    .mark .bar { display: flex; gap: 4px; height: 5px; }
+    .mark .bar i { flex: 1; border-radius: 3px; }
+    .gh { font-weight: 600; text-decoration: none; padding: 10px 18px; border: 2px solid var(--line); border-radius: 999px; }
+    .gh:hover { border-color: var(--accent); }
+
+    .hero { padding-block: clamp(40px, 8vw, 96px) 40px; }
+    h1 { font-family: "Archivo Black"; font-weight: 400; font-size: clamp(2.6rem, 7.4vw, 6.4rem); line-height: 0.95; letter-spacing: -0.045em; max-width: 13ch; }
+    .lede { margin-top: 28px; max-width: 58ch; font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--muted); }
+
+    .try { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+    .try p { font-weight: 600; }
+    .chips { display: flex; gap: 10px; }
+    .chip { width: 52px; height: 52px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; background-size: cover; background-position: center; position: relative; }
+    .chip::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 16px; height: 16px; border-radius: 50%; background: var(--c); border: 3px solid var(--bg); }
+    .chip[aria-pressed="true"] { border-color: var(--fg); }
+    .actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 14px; }
+    .btn { font-weight: 600; text-decoration: none; padding: 14px 24px; border-radius: 14px; border: 2px solid var(--line); }
+    .btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .btn:hover { border-color: var(--accent); }
+
+    .film { position: relative; margin-top: 12px; border-radius: 22px; overflow: hidden; border: 2px solid var(--line); background: #000; aspect-ratio: 16 / 9; }
+    .film video { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .film button { position: absolute; right: 16px; bottom: 16px; font: 600 0.95rem "Hanken Grotesk", sans-serif; color: var(--fg); background: color-mix(in srgb, var(--bg) 82%, transparent); border: 2px solid var(--line); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+
+    section.block { padding-block: clamp(64px, 9vw, 120px) 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px 56px; }
+    section.block h2 { font-family: "Archivo Black"; font-weight: 400; font-size: clamp(1.8rem, 3.2vw, 2.6rem); line-height: 1.02; letter-spacing: -0.035em; }
+    .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 32px; }
+    .apps div { padding: 14px 0; border-top: 2px solid var(--line); }
+    .apps dt { font-weight: 600; }
+    .apps dd { color: var(--muted); font-size: 1rem; }
+    .note { margin-top: 20px; color: var(--muted); font-size: 1rem; max-width: 62ch; }
+    ol.steps { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 26px; max-width: 62ch; }
+    ol.steps li { counter-increment: s; display: grid; grid-template-columns: 56px 1fr; }
+    ol.steps li::before { content: counter(s); font-family: "Archivo Black"; font-size: 1.9rem; line-height: 1.1; color: var(--accent); }
+    ol.steps strong { display: block; font-size: 1.2rem; }
+    ol.steps span { color: var(--muted); }
+    pre { font: 400 0.95rem/1.7 "JetBrains Mono", monospace; background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 22px 24px; overflow-x: auto; }
+    .after { margin-top: 18px; color: var(--muted); }
+
+    footer { margin-top: clamp(80px, 10vw, 140px); padding-block: 36px 48px; border-top: 2px solid var(--line); color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+    @media (max-width: 760px) {
+      section.block { grid-template-columns: minmax(0, 1fr); }
+      .film button { right: 10px; bottom: 10px; }
+    }
+
+    /* The page switches themes the way themely does: a circle grows from what you clicked. */
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+    ::view-transition-new(root) { animation: reveal 0.75s cubic-bezier(0.76, 0, 0.24, 1); }
+    @keyframes reveal {
+      from { clip-path: circle(0 at var(--x, 50%) var(--y, 0)); }
+      to { clip-path: circle(var(--r, 150vmax) at var(--x, 50%) var(--y, 0)); }
+    }
+    @media (prefers-reduced-motion: reduce) { ::view-transition-new(root) { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="mark" href="#" aria-label="themely home">themely
+        <span class="bar" aria-hidden="true"><i style="background:#ff1a1b"></i><i style="background:#89b4fa"></i><i style="background:#50c87c"></i><i style="background:#c4c0a2"></i></span>
+      </a>
+      <a class="gh" href="https://github.com/noturbob/themely">GitHub</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>One keybind re‑themes your whole desktop.</h1>
+        <p class="lede">Pick a wallpaper and themely pulls the accent colour out of it, then recolours niri, your terminal, editor, browser, Discord and Spotify. Most apps change live, behind a circle that grows out of the wallpaper you picked.</p>
+
+        <div class="try">
+          <p id="try-label">Try it on this page:</p>
+          <div class="chips" role="group" aria-labelledby="try-label">
+            <button class="chip" data-theme="death-bloom" style="--c:#ff1a1b;background-image:url(themes/death-bloom.jpg)" aria-pressed="true" aria-label="Death Bloom"></button>
+            <button class="chip" data-theme="mocha-blue" style="--c:#89b4fa;background-image:url(themes/mocha-blue.jpg)" aria-pressed="false" aria-label="Mocha Blue"></button>
+            <button class="chip" data-theme="nebula" style="--c:#50c87c;background-image:url(themes/nebula.jpg)" aria-pressed="false" aria-label="Nebula"></button>
+            <button class="chip" data-theme="whiskers" style="--c:#c4c0a2;background-image:url(themes/whiskers.jpg)" aria-pressed="false" aria-label="Whiskers"></button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/noturbob/themely">Get themely on GitHub</a>
+          <a class="btn" href="https://github.com/noturbob/themely#install">Read the setup guide</a>
+        </div>
+      </section>
+
+      <div class="film">
+        <video id="film" autoplay muted loop playsinline preload="metadata" poster="poster.jpg" aria-label="themely switching a niri desktop between four themes">
+          <source src="themely.mp4" type="video/mp4">
+        </video>
+        <button id="film-toggle" type="button" aria-controls="film">Pause</button>
+      </div>
+
+      <section class="block" aria-labelledby="h-apps">
+        <h2 id="h-apps">What follows the theme</h2>
+        <div>
+          <dl class="apps">
+            <div><dt>niri</dt><dd>Borders and one opacity for every window</dd></div>
+            <div><dt>kitty and your prompt</dt><dd>Colours, opacity, the powerline prompt</dd></div>
+            <div><dt>GTK and KDE apps</dt><dd>Live, open windows included</dd></div>
+            <div><dt>VS Code and forks</dt><dd>Antigravity, VSCodium, Cursor</dd></div>
+            <div><dt>Firefox and Zen</dt><dd>Live, through Pywalfox</dd></div>
+            <div><dt>Vesktop</dt><dd>Discord recolours as you switch</dd></div>
+            <div><dt>Spotify</dt><dd>Through spicetify, with a quick restart</dd></div>
+            <div><dt>slat and btop</dt><dd>Running sessions recolour in place</dd></div>
+            <div><dt>flowbar, mako, fuzzel</dt><dd>The bar, notifications and launcher</dd></div>
+          </dl>
+          <p class="note">Web pages keep their own colours, and apps with only built-in themes, like the official Discord client, can't be themed.</p>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="h-how">
+        <h2 id="h-how">How a switch works</h2>
+        <ol class="steps">
+          <li><div><strong>Press Mod+Shift+T and pick a wallpaper.</strong><span>A strip of your themes slides up over the desktop.</span></div></li>
+          <li><div><strong>themely reads the wallpaper.</strong><span>It picks the most vivid colour that isn't grey or tiny, and derives the background, text and terminal colours from it. You can override the pick in the dashboard.</span></div></li>
+          <li><div><strong>Every app changes behind a circular reveal.</strong><span>Configs are rewritten only between themely's marker comments, and each app is told to reload. Everything else in your dotfiles stays yours.</span></div></li>
+        </ol>
+      </section>
+
+      <section class="block" aria-labelledby="h-install">
+        <h2 id="h-install">Install</h2>
+        <div>
+<pre><code>git clone https://github.com/noturbob/themely ~/projects/themely
+ln -s ~/projects/themely/themely.py ~/.local/bin/themely
+ln -s ~/projects/themely/shell ~/.config/quickshell/themely
+themely save --name "My theme" --wallpaper ~/Pictures/wall.jpg</code></pre>
+          <p class="after">You need niri, Quickshell, ImageMagick and swaybg. The <a href="https://github.com/noturbob/themely#install">setup guide</a> covers the niri keybind, the marker lines and the one-time steps for each app.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>themely is built by noturbob for niri on Wayland.</span>
+      <a href="https://github.com/noturbob/themely">Source on GitHub</a>
+    </footer>
+  </div>
+
+  <script>
+    const chips = [...document.querySelectorAll(".chip")];
+    function setTheme(name) {
+      document.documentElement.dataset.theme = name;
+      chips.forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.theme === name)));
+      document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    }
+    chips.forEach((chip) => chip.addEventListener("click", () => {
+      const name = chip.dataset.theme;
+      if (document.documentElement.dataset.theme === name) return;
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!document.startViewTransition || reduce) return setTheme(name);
+      const r = chip.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const root = document.documentElement.style;
+      root.setProperty("--x", x + "px");
+      root.setProperty("--y", y + "px");
+      root.setProperty("--r", Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + "px");
+      document.startViewTransition(() => setTheme(name));
+    }));
+
+    const film = document.getElementById("film"), toggle = document.getElementById("film-toggle");
+    toggle.addEventListener("click", () => {
+      if (film.paused) { film.play(); toggle.textContent = "Pause"; } else { film.pause(); toggle.textContent = "Play"; }
+    });
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { film.pause(); toggle.textContent = "Play"; }
+  </script>
+</body>
+</html>
