@@ -93,6 +93,7 @@ Everything outside the markers is yours. Every write:
 | **Qt 5** (VLC) | qt5ct color scheme | next launch |
 | **Firefox / Zen** | [Pywalfox](https://github.com/Frewacom/pywalfox) (`~/.cache/wal/colors.json` + `pywalfox update`) | live |
 | **btop** | `themes/themely.theme`, reloaded with `SIGUSR2` | live |
+| **[slat](https://github.com/noturbob/slat)** | `[theme]` colors in `config.toml`, daemon reloaded with `SIGUSR1` | live |
 | **Spotify** | [spicetify](https://spicetify.app) color scheme | Spotify restarts |
 | **System dark mode** | `gsettings color-scheme prefer-dark` | live |
 

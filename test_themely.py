@@ -337,6 +337,31 @@ def test_spotify():
     t.run = lambda *cmd: None
 
 
+def test_slat():
+    calls = []
+    t.run = lambda *cmd: calls.append(cmd)
+    conf = HOME / ".config/slat/config.toml"
+    conf.parent.mkdir(parents=True, exist_ok=True)
+    conf.write_text('[theme]\nname = "nord"\naccent = "#ff0000"\n\n[borders]\nstyle = "rounded"\n')
+    p = t.palette("#50c87c")
+    t.slat(p, 0.8)
+    t.slat(p, 0.8)
+    text = conf.read_text()
+    # TOML rejects duplicate keys: a hand-set colour in [theme] moves inside the managed block.
+    assert text.count("accent = ") == 1 and f'accent = "{p["accent"]}"' in text, text
+    assert text.startswith('[theme]\nname = "nord"\n# >>> themely colors\n'), text
+    assert '[borders]\nstyle = "rounded"\n' in text and f'tab_active_bg = "{p["accent"]}"' in text, text
+    assert ("pkill", "-USR1", "-f", t.SLAT_DAEMON) in calls
+    # Only the daemon itself: a shell or editor whose command line mentions it must not get the signal.
+    daemon = re.compile(t.SLAT_DAEMON)
+    assert daemon.search("/home/u/go/bin/slat __daemon") and daemon.search("slat __daemon")
+    assert not daemon.search("bash -c 'pgrep slat __daemon; sleep 1'") and not daemon.search("vim slat __daemon.txt")
+    conf.write_text('[borders]\nstyle = "rounded"\n')  # no [theme] table yet
+    t.slat(p, 0.8)
+    assert conf.read_text().startswith('[borders]\nstyle = "rounded"\n\n[theme]\n# >>> themely colors\n'), conf.read_text()
+    t.run = lambda *cmd: None
+
+
 def test_cli():
     assert t.main(["palette", "#89b4fa"]) == 0
     assert t.main(["apply", "nope"]) == 1

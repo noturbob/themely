@@ -556,6 +556,33 @@ def spotify(p, o):
         run("spicetify", "restart")  # Spotify only reads theme colors at start
 
 
+# The whole command line of a slat daemon, nothing more: SIGUSR1 kills any other process it reaches.
+SLAT_DAEMON = r"^(\S*/)?slat __daemon$"
+SLAT_KEYS = {"bg": "bg", "fg": "fg", "dim": "fg_muted", "accent": "accent", "border": "surface1",
+             "tab_bg": "surface0", "tab_fg": "fg_muted", "tab_active_bg": "accent", "tab_active_fg": "bg"}
+
+
+def slat(p, o):
+    """slat's [theme] colors; its daemon re-reads them on SIGUSR1, so open sessions recolor live."""
+    conf = CFG / "slat/config.toml"
+    if not conf.parent.exists():
+        return
+    text = conf.read_text() if conf.exists() else ""
+    if ">>> themely colors" not in text:
+        if not re.search(r"(?m)^\[theme\][ \t]*$", text):
+            text = (text.rstrip("\n") + "\n\n" if text.strip() else "") + "[theme]\n"
+        start = re.search(r"(?m)^\[theme\][ \t]*\n", text).end()
+        nxt = re.search(r"(?m)^\[", text[start:])
+        end = start + nxt.start() if nxt else len(text)
+        # TOML forbids duplicate keys, so hand-set colours give way to the managed block.
+        body = re.sub(rf"(?m)^[ \t]*({'|'.join(SLAT_KEYS)})[ \t]*=.*\n?", "", text[start:end])
+        kept = body.rstrip("\n")
+        body = (kept + "\n" if kept else "") + "# >>> themely colors\n# <<< themely\n" + body[len(kept) + 1:]
+        write(conf, text[:start] + body + text[end:])
+    edit(conf, {"colors": "".join(f'{k} = "{p[v]}"\n' for k, v in SLAT_KEYS.items())})
+    run("pkill", "-USR1", "-f", SLAT_DAEMON)
+
+
 def wallpaper(p, o):
     old = subprocess.run(["pgrep", "-x", "swaybg"], capture_output=True, text=True).stdout.split()
     subprocess.Popen(["swaybg", "-i", str(CURRENT / "wallpaper"), "-m", "fill"], start_new_session=True,
@@ -569,7 +596,7 @@ def wallpaper(p, o):
 
 
 TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel),
-           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox), ("btop", btop), ("prompt", prompt), ("spotify", spotify),
+           ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox), ("btop", btop), ("prompt", prompt), ("slat", slat), ("spotify", spotify),
            ("wallpaper", wallpaper)]
 
 
