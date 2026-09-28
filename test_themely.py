@@ -310,43 +310,65 @@ def test_prompt():
     p = t.palette("#50c87c")
     t.prompt(p, 0.8)
     text = (HOME / ".cache/themely/prompt.sh").read_text()
-    vals = dict(re.findall(r"(\w+)='([\d;]+)'", text))
-    assert set(vals) == {"lav", "lav_bg", "blue", "blue_bg", "sap", "sap_bg"}, text
+    names = ["lav", "lav_bg", "blue", "blue_bg", "sap", "sap_bg"]
+    # kitty (also through a multiplexer that resets TERM) gets palette slots; anything else 24-bit
+    for env, args in (({"KITTY_WINDOW_ID": "1", "TERM": "xterm-256color"}, "5"),
+                      ({"KITTY_WINDOW_ID": "1", "TERM_PROGRAM": "vscode"}, "2"), ({"TERM": "xterm-kitty"}, "2")):
+        out = subprocess.run(["bash", "-c", f'. "$0"; echo "$lav $lav_bg $blue $blue_bg $sap $sap_bg"',
+                              HOME / ".cache/themely/prompt.sh"], env=env,
+                             capture_output=True, text=True, check=True).stdout.split()
+        vals = dict(zip(names, out))
+        assert len(out) == 6 and all(v.startswith(args + ";") for v in out), (env, text)
     rgb = lambda h: [int(h[i:i + 2], 16) for i in (1, 3, 5)]
-    assert vals["blue"] == ";".join(map(str, rgb(p["accent"])))
+    assert vals["blue"] == "2;" + ";".join(map(str, rgb(p["accent"])))
     # *_bg = accent blended 30% into the background (same recipe as the hand-made Catppuccin prompt)
     expect = [round(0.3 * a + 0.7 * b) for a, b in zip(rgb(p["accent"]), rgb(p["bg"]))]
-    assert vals["blue_bg"] == ";".join(map(str, expect)), vals
+    assert vals["blue_bg"] == "2;" + ";".join(map(str, expect)), vals
+    # kitty's palette slots hold the same colors, so drawn prompts recolor when kitty reloads
+    conf = HOME / ".config/kitty/kitty.conf"
+    conf.parent.mkdir(parents=True, exist_ok=True)
+    conf.write_text("# >>> themely colors\n# <<< themely\n")
+    t.run = lambda *cmd: None
+    t.kitty(p, 0.8)
+    assert f"color{t.PROMPT_SLOT + 2} {p['accent']}\n" in conf.read_text(), conf.read_text()
 
 
 def test_spotify():
-    calls = []
+    calls, spice, launched = [], [], []
+    ini = HOME / ".config/spicetify/config-xpui.ini"
+
+    def fake_spicetify(*args):  # records the call and, like spicetify, saves `config` changes
+        spice.append(args)
+        if "extensions" in args:
+            ini.parent.mkdir(parents=True, exist_ok=True)
+            ini.write_text("[AdditionalFeatures]\nextensions            = themely.js\n")
     t.run = lambda *cmd: calls.append(cmd)
+    t.spicetify = fake_spicetify
+    t.launch = lambda *cmd: launched.append(cmd)
     t.has = lambda cmd: cmd == "spicetify"
     p = t.palette("#50c87c")
-    t.spotify(p, 0.8)
-    ini = (HOME / ".config/spicetify/Themes/themely/color.ini").read_text()
-    assert ini.startswith("[themely]\n") and f"button = {p['accent'][1:]}\n" in ini and f"main = {p['bg'][1:]}\n" in ini, ini
-    assert (HOME / ".config/spicetify/Themes/themely/user.css").exists()
-    assert ("spicetify", "config", "current_theme", "themely", "color_scheme", "themely") in calls
-    assert ("spicetify", "refresh") in calls
-    # Open Spotify restarts through the `spotify` launcher: `spicetify restart` runs the bare binary without
-    # ~/.config/spotify-flags.conf, and on a Wayland-only session that Spotify exits at once.
-    launched = []
-    t.launch = lambda *cmd: launched.append(cmd)
+    # First run: the live-recolor extension is new, so it's injected with `apply` and open Spotify restarts once,
+    # through the `spotify` launcher: the bare binary skips ~/.config/spotify-flags.conf and exits on Wayland.
     states = iter([True, True, False])  # open; still shutting down; gone
     t.running = lambda name: name == "spotify" and next(states, False)
-    calls.clear()
     t.spotify(p, 0.8)
-    assert ("spicetify", "restart") not in calls and ("pkill", "-x", "spotify") in calls and launched == [("spotify",)], (calls, launched)
-    t.running = lambda name: False
-    launched.clear()
+    colors = (HOME / ".config/spicetify/Themes/themely/color.ini").read_text()
+    assert colors.startswith("[themely]\n") and f"button = {p['accent'][1:]}\n" in colors and f"main = {p['bg'][1:]}\n" in colors, colors
+    assert (HOME / ".config/spicetify/Themes/themely/user.css").exists()
+    assert "colors.css" in (HOME / ".config/spicetify/Extensions/themely.js").read_text()
+    assert spice == [("config", "current_theme", "themely", "color_scheme", "themely", "extensions", "themely.js"),
+                     ("apply",)], spice
+    assert ("pkill", "-x", "spotify") in calls and launched == [("spotify",)], (calls, launched)
+    # Every later switch: just refresh the colors; the extension recolors the open Spotify, no restart.
+    spice.clear(), calls.clear(), launched.clear()
+    t.running = lambda name: True
     t.spotify(p, 0.8)
-    assert launched == []  # closed Spotify stays closed
-    calls.clear()
+    assert spice == [("config", "current_theme", "themely", "color_scheme", "themely"), ("refresh",)], spice
+    assert calls == [] and launched == [], (calls, launched)
+    spice.clear()
     t.has = lambda cmd: False
     t.spotify(p, 0.8)  # not installed: nothing runs
-    assert calls == []
+    assert spice == [] and calls == []
     t.run = lambda *cmd: None
 
 

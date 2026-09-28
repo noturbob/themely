@@ -87,7 +87,7 @@ Everything outside the markers is yours. Every write:
 | **Window opacity** | one niri rule for every window (kitty uses its own background opacity so text stays crisp) | live |
 | **niri borders** | `layout { border }` colors | live |
 | **kitty** | colors + `background_opacity`, reloaded with `SIGUSR1` | live |
-| **Shell prompt** (bash powerline) | `~/.cache/themely/prompt.sh`, sourced before each prompt | next prompt |
+| **Shell prompt** (bash powerline) | `~/.cache/themely/prompt.sh`, sourced before each prompt; in kitty, palette slots 16–21 | live in kitty (also inside slat), else next prompt |
 | **flowbar** | `[theme]` accent/background/opacity (flowbar watches its config) | live |
 | **mako** | notification colors + `makoctl reload` | live |
 | **fuzzel** | `[colors]` | next launch |
@@ -100,7 +100,7 @@ Everything outside the markers is yours. Every write:
 | **Firefox / Zen** | [Pywalfox](https://github.com/Frewacom/pywalfox) (`~/.cache/wal/colors.json` + `pywalfox update`) | live |
 | **btop** | `themes/themely.theme`, reloaded with `SIGUSR2` | live |
 | **[slat](https://github.com/noturbob/slat)** | `[theme]` colors in `config.toml`, daemon reloaded with `SIGUSR1` | live |
-| **Spotify** | [spicetify](https://spicetify.app) color scheme | Spotify restarts |
+| **Spotify** | [spicetify](https://spicetify.app) color scheme, reloaded by a small themely extension | live (restarts once, when the extension is first added) |
 | **System dark mode** | `gsettings color-scheme prefer-dark` | live |
 
 **Can't be themed:**
@@ -232,11 +232,14 @@ Log out and back in once, so apps start with the new `QT_QPA_PLATFORMTHEME` and 
 These steps are one click or one command each. Skip the ones for apps you don't use.
 
 **Shell prompt (bash).** Inside your prompt function, after your default colors, source the generated
-file. It defines `lav lav_bg blue blue_bg sap sap_bg` as `R;G;B` strings for 24-bit escape codes:
+file. It defines `lav lav_bg blue blue_bg sap sap_bg` as the color part of an SGR code, used as
+`\e[38;${blue}m` (text) or `\e[48;${blue_bg}m` (background). In kitty they are palette slots 16–21
+(`5;16`…), so prompts already on screen recolor live, also inside a multiplexer like slat; elsewhere
+they are 24-bit `2;R;G;B`:
 
 ```bash
 __prompt() {
-  local lav='180;190;254' lav_bg='90;94;129' blue='137;180;250' blue_bg='64;78;111' sap='116;199;236' sap_bg='52;74;95'
+  local lav='2;180;190;254' lav_bg='2;90;94;129' blue='2;137;180;250' blue_bg='2;64;78;111' sap='2;116;199;236' sap_bg='2;52;74;95'
   [ -r ~/.cache/themely/prompt.sh ] && . ~/.cache/themely/prompt.sh   # themely colors
   ...
 }
@@ -342,7 +345,8 @@ qs -c themely ipc call theme apply <id>
 | KDE folder icons keep the old color | Icons are cached; they update when redrawn or on the app's next start. |
 | Firefox/Zen keep the old colors | Pywalfox add-on installed in *that* browser, and **Fetch Pywal colors** clicked once? |
 | Spotify won't start | Missing `~/.config/spotify-flags.conf` Wayland flags (see above). |
-| Prompt didn't change in an open terminal | `source ~/.bashrc` once; new terminals are fine. |
+| "Some apps didn't switch: spotify" | Spotify updated, so spicetify's backup is stale: `spicetify backup apply` (after `sudo chmod -R a+wr /opt/spotify` if it can't write). |
+| Prompt didn't change in an open terminal | `source ~/.bashrc` once (needed after updating themely's prompt setup); new terminals are fine. |
 | A theme is missing from the list | Its `theme.json` is invalid; `themely list` prints why on stderr. |
 
 ---
