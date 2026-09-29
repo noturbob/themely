@@ -84,14 +84,14 @@ Everything outside the markers is yours. Every write:
 | App | How | When |
 |---|---|---|
 | **Wallpaper** | swaybg restarted under the reveal overlay | live |
-| **Window opacity** | one niri rule for every window (kitty uses its own background opacity so text stays crisp) | live |
+| **Window opacity + blur** | one niri rule for every window (kitty uses its own background opacity so text stays crisp); every window blurs what's behind it, like kitty's `background_blur` | live |
 | **niri borders** | `layout { border }` colors | live |
 | **kitty** | colors + `background_opacity`, reloaded with `SIGUSR1` | live |
 | **Shell prompt** (bash powerline) | `~/.cache/themely/prompt.sh`, sourced before each prompt; in kitty, palette slots 16–21 | live in kitty (also inside slat), else next prompt |
 | **flowbar** | `[theme]` accent/background/opacity (flowbar watches its config) | live |
 | **mako** | notification colors + `makoctl reload` | live |
 | **fuzzel** | `[colors]` | next launch |
-| **VS Code, Antigravity, VSCodium, Cursor** | `workbench.colorCustomizations` in `settings.json` | live |
+| **VS Code, Antigravity, VSCodium, Cursor** | `workbench.colorCustomizations` in `settings.json`, covering the gutter, minimap, menus and widgets too, so no blue from the base theme shows through | live |
 | **Vesktop** | `~/.config/vesktop/themes/themely.css` (Vencord hot-reloads it) | live |
 | **GTK 3 / GTK 4** | recolored copy of GTK's own theme, switched through `gsettings` | live |
 | **Brave / Chromium** | follows the GTK theme (Settings → Appearance → Theme → **GTK**) | live |

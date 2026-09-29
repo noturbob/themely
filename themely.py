@@ -245,7 +245,9 @@ def niri(p, o):
             '        urgent-color "#f38ba8"\n'
             "    }\n"),
         # Every window, so transparency is consistent; kitty does its own (text-preserving) background opacity.
-        "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n',
+        # Blur behind every window too, like kitty's background_blur, so text stays readable over the wallpaper.
+        "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n'
+                   'window-rule {\n    background-effect { blur true; }\n}\n',
     }, c="//")
 
 
@@ -299,6 +301,12 @@ def vscode(p, o):
         "editor.background": bg, "sideBar.background": bg, "activityBar.background": bg,
         "panel.background": bg, "terminal.background": bg, "titleBar.activeBackground": bg,
         "statusBar.background": bg, "editorGroupHeader.tabsBackground": bg, "tab.inactiveBackground": bg,
+        # base themes (Catppuccin, Tokyo Night) paint these their own color, not editor.background's
+        "editorGutter.background": bg, "minimap.background": bg, "editorOverviewRuler.background": bg,
+        "breadcrumb.background": bg, "editorGroup.emptyBackground": bg, "sideBarSectionHeader.background": bg,
+        "titleBar.inactiveBackground": bg, "tab.unfocusedActiveBackground": bg,
+        "menu.background": s0, "editorHoverWidget.background": s0, "editorSuggestWidget.background": s0,
+        "notifications.background": s0,
         "tab.activeBackground": s0, "editorWidget.background": s0, "input.background": s0,
         "dropdown.background": s0, "list.activeSelectionBackground": s1,
         "focusBorder": a, "activityBar.activeBorder": a, "tab.activeBorderTop": a,

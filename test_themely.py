@@ -126,6 +126,7 @@ def test_apply():
     # One rule for every window (consistent transparency), except kitty which does its own background opacity.
     rule = niri[niri.index(">>> themely opacity"):]
     assert "match" not in rule and 'exclude app-id=r#"^kitty$"#' in rule, rule
+    assert "background-effect { blur true; }" in rule, rule  # frosted like kitty's background_blur
     assert "background_opacity 0.8" in (cfg / "kitty/kitty.conf").read_text()
     assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
     assert "background-color=" in (cfg / "mako/config").read_text()
@@ -288,6 +289,9 @@ def test_vscode_forks():
     assert text.count(">>> themely colors") == 1, text
     vs = jsonc(text)
     assert vs["workbench.colorCustomizations"]["focusBorder"] == "#50c87c" and vs["workbench.colorTheme"] == "Tokyo Night"
+    # line numbers and minimap follow the theme, not the base theme's own blue
+    for k in ("editorGutter.background", "minimap.background"):
+        assert vs["workbench.colorCustomizations"][k] == p["bg"], k
 
 
 def test_btop():
