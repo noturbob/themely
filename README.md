@@ -347,6 +347,7 @@ qs -c themely ipc call theme apply <id>
 | Spotify won't start | Missing `~/.config/spotify-flags.conf` Wayland flags (see above). |
 | "Some apps didn't switch: spotify" | Spotify updated, so spicetify's backup is stale: `spicetify backup apply` (after `sudo chmod -R a+wr /opt/spotify` if it can't write). |
 | Prompt didn't change in an open terminal | `source ~/.bashrc` once (needed after updating themely's prompt setup); new terminals are fine. |
+| niri shows a config error after a switch | Your niri is too old for the `background-effect { blur true; }` rule in the opacity block. Update niri. |
 | A theme is missing from the list | Its `theme.json` is invalid; `themely list` prints why on stderr. |
 
 ---
