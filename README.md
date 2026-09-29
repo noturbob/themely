@@ -383,5 +383,7 @@ touch the real desktop.
   test.
 - **Palette keys:** `accent accent2 bg surface0 surface1 overlay fg fg_muted color0…color15`.
 
-The website and design notes live on the [`website`](https://github.com/noturbob/themely/tree/website) branch, and the demo
-media in the [`media`](https://github.com/noturbob/themely/releases/tag/media) release, so a clone of `main` holds only the app.
+The website and design notes live on the
+[`website`](https://github.com/noturbob/themely/tree/website) branch, and the demo media in the
+[`media`](https://github.com/noturbob/themely/releases/tag/media) release, so a clone of `main` holds
+only the app.
