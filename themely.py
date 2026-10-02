@@ -246,8 +246,10 @@ def niri(p, o):
             "    }\n"),
         # Every window, so transparency is consistent; kitty does its own (text-preserving) background opacity.
         # Blur behind every window too, like kitty's background_blur, so text stays readable over the wallpaper.
+        # The overview (Mod+Tab) backdrop rides along here: it's top-level, and a new marker would break old configs.
         "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n'
-                   'window-rule {\n    background-effect { blur true; }\n}\n',
+                   'window-rule {\n    background-effect { blur true; }\n}\n'
+                   f'overview {{\n    backdrop-color "{p["bg"]}"\n}}\n',
     }, c="//")
 
 

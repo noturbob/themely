@@ -127,6 +127,7 @@ def test_apply():
     rule = niri[niri.index(">>> themely opacity"):]
     assert "match" not in rule and 'exclude app-id=r#"^kitty$"#' in rule, rule
     assert "background-effect { blur true; }" in rule, rule  # frosted like kitty's background_blur
+    assert "overview {\n    backdrop-color \"#" in rule, rule  # Mod+Tab backdrop follows the theme
     assert "background_opacity 0.8" in (cfg / "kitty/kitty.conf").read_text()
     assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
     assert "background-color=" in (cfg / "mako/config").read_text()
