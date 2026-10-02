@@ -85,7 +85,7 @@ Everything outside the markers is yours. Every write:
 |---|---|---|
 | **Wallpaper** | swaybg restarted under the reveal overlay | live |
 | **Window opacity + blur** | one niri rule for every window (kitty uses its own background opacity so text stays crisp); every window blurs what's behind it, like kitty's `background_blur` | live |
-| **niri borders + overview** | `layout { border }` colors; the wallpaper sits behind the overview (Mod+Tab) too, dimmed to half over the theme background (desktop included) | live |
+| **niri borders + overview** | `layout { border }` colors; the overview (Mod+Tab) sits on a blurred, half-dimmed copy of the wallpaper drawn by the shell | live |
 | **kitty** | colors + `background_opacity`, reloaded with `SIGUSR1` | live |
 | **Shell prompt** (bash powerline) | `~/.cache/themely/prompt.sh`, sourced before each prompt; in kitty, palette slots 16–21 | live in kitty (also inside slat), else next prompt |
 | **flowbar** | `[theme]` accent/background/opacity (flowbar watches its config) | live |

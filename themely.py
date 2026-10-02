@@ -243,18 +243,14 @@ def niri(p, o):
             f'        active-color "{p["accent"]}"\n'
             f'        inactive-color "{p["surface1"]}"\n'
             '        urgent-color "#f38ba8"\n'
-            "    }\n"
-            # Workspaces see through to the wallpaper, which lives in the backdrop (see the layer-rule below).
-            '    background-color "transparent"\n'),
+            "    }\n"),
         # Every window, so transparency is consistent; kitty does its own (text-preserving) background opacity.
         # Blur behind every window too, like kitty's background_blur, so text stays readable over the wallpaper.
-        # The wallpaper goes in the backdrop, so the overview (Mod+Tab) shows it behind the workspaces. It rides
-        # along here because it's top-level, and a new marker would break old configs.
+        # The shell's blurred, dimmed wallpaper goes in the backdrop, so only the overview (Mod+Tab) shows it.
+        # It rides along here because it's top-level, and a new marker would break old configs.
         "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n'
                    'window-rule {\n    background-effect { blur true; }\n}\n'
-                   # Dimmed over the theme bg (desktop too: niri can't style the backdrop alone).
-                   'layer-rule {\n    match namespace="^wallpaper$"\n    place-within-backdrop true\n    opacity 0.5\n}\n'
-                   f'overview {{\n    backdrop-color "{p["bg"]}"\n}}\n',
+                   'layer-rule {\n    match namespace="^themely-backdrop$"\n    place-within-backdrop true\n}\n',
     }, c="//")
 
 
@@ -668,6 +664,8 @@ def wallpaper(p, o):
             os.kill(int(pid), signal.SIGTERM)
         except ProcessLookupError:
             pass
+    if has("qs"):
+        run("qs", "-c", "themely", "ipc", "call", "backdrop", "reload")  # the overview's blurred copy
 
 
 TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel),

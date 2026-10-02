@@ -54,6 +54,14 @@ ShellRoot {
         }
     }
 
+    // themely's wallpaper target calls this after a switch: qs -c themely ipc call backdrop reload
+    IpcHandler {
+        target: "backdrop"
+        function reload(): void { backdrop.reload() }
+    }
+
+    Backdrop { id: backdrop }
+
     IpcHandler {
         target: "dashboard"
         function toggle(): void { root.dashboardOpen = !root.dashboardOpen }
