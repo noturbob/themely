@@ -252,7 +252,9 @@ def niri(p, o):
         # along here because it's top-level, and a new marker would break old configs.
         "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n'
                    'window-rule {\n    background-effect { blur true; }\n}\n'
-                   'layer-rule {\n    match namespace="^wallpaper$"\n    place-within-backdrop true\n}\n',
+                   # Dimmed over the theme bg (desktop too: niri can't style the backdrop alone).
+                   'layer-rule {\n    match namespace="^wallpaper$"\n    place-within-backdrop true\n    opacity 0.5\n}\n'
+                   f'overview {{\n    backdrop-color "{p["bg"]}"\n}}\n',
     }, c="//")
 
 
