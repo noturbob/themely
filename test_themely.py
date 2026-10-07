@@ -107,8 +107,8 @@ def test_apply():
         "niri/config.kdl": "layout {\n    // >>> themely border\n    // <<< themely\n}\n// >>> themely opacity\n// <<< themely\n",
         "kitty/kitty.conf": "font_size 15\n# >>> themely colors\n# <<< themely\n",
         "flowbar/config.ini": "[theme]\n# >>> themely colors\n# <<< themely\npreset = x\n",
-        "mako/config": "width=300\n# >>> themely colors\n# <<< themely\n",
-        "fuzzel/fuzzel.ini": "[colors]\n# >>> themely colors\n# <<< themely\n[border]\nwidth=2\n",
+        "mako/config": "width=300\nborder-radius=10\n# >>> themely colors\n# <<< themely\n",
+        "fuzzel/fuzzel.ini": "[colors]\n# >>> themely colors\n# <<< themely\n[border]\nwidth=2\nradius=15\n",
         "hypr/hyprlock.conf": "# >>> themely colors\n# <<< themely\ngeneral {\n}\n",
         "Code/User/settings.json": '{\n  // >>> themely colors\n  // <<< themely\n  "b": [1,],\n}\n',
         "zen/profiles.ini": "[Install1]\nDefault=abc.default\n",
@@ -129,11 +129,13 @@ def test_apply():
     assert "match" not in rule.split("layer-rule")[0] and 'exclude app-id=r#"^kitty$"#' in rule, rule
     assert "background-effect { blur true; }" in rule, rule  # frosted like kitty's background_blur
     assert 'namespace="^themely-backdrop$"' in rule and "place-within-backdrop true" in rule, rule  # Mod+Tab only
-    assert 'namespace="^launcher$"\n    background-effect { blur true; }' in rule, rule  # fuzzel
+    # fuzzel and mako blur too, clipped to their own corner radius so no square corners poke out
+    assert 'namespace="^launcher$"\n    background-effect { blur true; }\n    geometry-corner-radius 15\n' in rule, rule
+    assert 'namespace="^notifications$"\n    background-effect { blur true; }\n    geometry-corner-radius 10\n' in rule, rule
     assert "background_opacity 0.8" in (cfg / "kitty/kitty.conf").read_text()
     assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
     assert "background-color=" in (cfg / "mako/config").read_text()
-    assert "[border]\nwidth=2" in (cfg / "fuzzel/fuzzel.ini").read_text()
+    assert "[border]\nwidth=2\nradius=15" in (cfg / "fuzzel/fuzzel.ini").read_text()
     hl = (cfg / "hypr/hyprlock.conf").read_text()
     assert "$accent = rgb(89b4fa)\n" in hl and "general {" in hl and "#89" not in hl  # hyprlang wants rgb(rrggbb)
     vs = jsonc((cfg / "Code/User/settings.json").read_text())
