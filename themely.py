@@ -298,17 +298,18 @@ def fuzzel(p, o):
         f"border={h['accent']}ff\n")})
 
 
-def swaylock(p, o):
+def hyprlock(p, o):
+    """hyprlang variables; the rest of hyprlock.conf uses $bg, $fg, ... so its layout stays the user's."""
     h = {k: v[1:] for k, v in p.items()}
-    inside = h["bg"] + "cc"
-    edit(CFG / "swaylock/config", {"colors": (
-        f"color={h['bg']}\n"
-        f"inside-color={inside}\ninside-ver-color={inside}\ninside-wrong-color={inside}\ninside-clear-color={inside}\n"
-        f"ring-color={h['surface1']}\nring-ver-color={h['accent2']}\n"
-        f"ring-wrong-color={h['color1']}\nring-clear-color={h['accent2']}\n"
-        f"key-hl-color={h['accent']}\nbs-hl-color={h['color1']}\n"
-        f"text-color={h['fg']}\ntext-ver-color={h['fg']}\ntext-wrong-color={h['color1']}\ntext-clear-color={h['fg']}\n"
-        "line-color=00000000\nseparator-color=00000000\n")})
+    edit(CFG / "hypr/hyprlock.conf", {"colors": (
+        f"$bg = rgba({h['bg']}{alpha(o)})\n"
+        f"$surface = rgb({h['surface1']})\n"
+        f"$fg = rgb({h['fg']})\n"
+        f"$muted = rgb({h['fg_muted']})\n"
+        f"$accent = rgb({h['accent']})\n"
+        f"$accent2 = rgb({h['accent2']})\n"
+        f"$red = rgb({h['color1']})\n"
+        f"$yellow = rgb({h['color3']})\n")})
 
 
 def vscode(p, o):
@@ -681,7 +682,7 @@ def wallpaper(p, o):
         run("qs", "-c", "themely", "ipc", "call", "backdrop", "reload")  # the overview's blurred copy
 
 
-TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel), ("swaylock", swaylock),
+TARGETS = [("niri", niri), ("kitty", kitty), ("flowbar", flowbar), ("mako", mako), ("fuzzel", fuzzel), ("hyprlock", hyprlock),
            ("vscode", vscode), ("vesktop", vesktop), ("gtk", gtk), ("qt", qt), ("browsers", browsers), ("pywalfox", pywalfox), ("btop", btop), ("prompt", prompt), ("slat", slat), ("spotify", spotify),
            ("wallpaper", wallpaper)]
 
