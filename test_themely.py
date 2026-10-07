@@ -109,6 +109,7 @@ def test_apply():
         "flowbar/config.ini": "[theme]\n# >>> themely colors\n# <<< themely\npreset = x\n",
         "mako/config": "width=300\n# >>> themely colors\n# <<< themely\n",
         "fuzzel/fuzzel.ini": "[colors]\n# >>> themely colors\n# <<< themely\n[border]\nwidth=2\n",
+        "swaylock/config": "scaling=fill\n# >>> themely colors\n# <<< themely\n",
         "Code/User/settings.json": '{\n  // >>> themely colors\n  // <<< themely\n  "b": [1,],\n}\n',
         "zen/profiles.ini": "[Install1]\nDefault=abc.default\n",
     }
@@ -132,6 +133,8 @@ def test_apply():
     assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
     assert "background-color=" in (cfg / "mako/config").read_text()
     assert "[border]\nwidth=2" in (cfg / "fuzzel/fuzzel.ini").read_text()
+    sl = (cfg / "swaylock/config").read_text()
+    assert "key-hl-color=89b4fa\n" in sl and "scaling=fill" in sl and "=#" not in sl  # swaylock wants bare hex
     vs = jsonc((cfg / "Code/User/settings.json").read_text())
     assert vs["workbench.colorCustomizations"]["focusBorder"] == "#89b4fa" and vs["b"] == [1]
     assert "@name themely" in (cfg / "vesktop/themes/themely.css").read_text()

@@ -91,6 +91,7 @@ Everything outside the markers is yours. Every write:
 | **flowbar** | `[theme]` accent/background/opacity (flowbar watches its config) | live |
 | **mako** | notification colors + `makoctl reload` | live |
 | **fuzzel** | `[colors]` | next launch |
+| **swaylock** | ring, text and background colors | next lock |
 | **VS Code, Antigravity, VSCodium, Cursor** | `workbench.colorCustomizations` in `settings.json`, covering the gutter, minimap, menus and widgets too, so no blue from the base theme shows through | live |
 | **Vesktop** | `~/.config/vesktop/themes/themely.css` (Vencord hot-reloads it) | live |
 | **GTK 3 / GTK 4** | recolored copy of GTK's own theme, switched through `gsettings` | live |
@@ -212,6 +213,7 @@ Put the markers where the generated lines should go, and delete your own copies 
 | `~/.config/flowbar/config.ini` (in `[theme]`) | `# >>> themely colors` / `# <<< themely` | `accent`, `accent-2`, `background`, `foreground`, `opacity` |
 | `~/.config/mako/config` | `# >>> themely colors` / `# <<< themely` | `background-color`, `text-color`, `border-color` |
 | `~/.config/fuzzel/fuzzel.ini` (under `[colors]`) | `# >>> themely colors` / `# <<< themely` | the whole `[colors]` body |
+| `~/.config/swaylock/config` | `# >>> themely colors` / `# <<< themely` | every `*-color` line |
 
 VS Code and its forks need nothing: themely adds its markers to `settings.json` on the first run.
 
