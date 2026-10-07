@@ -248,8 +248,10 @@ def niri(p, o):
         # Blur behind every window too, like kitty's background_blur, so text stays readable over the wallpaper.
         # The shell's blurred, dimmed wallpaper goes in the backdrop, so only the overview (Mod+Tab) shows it.
         # It rides along here because it's top-level, and a new marker would break old configs.
+        # fuzzel is a layer surface, not a window, so its translucent background needs its own blur rule.
         "opacity": f'window-rule {{\n    exclude app-id=r#"^kitty$"#\n    opacity {o}\n}}\n'
                    'window-rule {\n    background-effect { blur true; }\n}\n'
+                   'layer-rule {\n    match namespace="^launcher$"\n    background-effect { blur true; }\n}\n'
                    'layer-rule {\n    match namespace="^themely-backdrop$"\n    place-within-backdrop true\n}\n',
     }, c="//")
 

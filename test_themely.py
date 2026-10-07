@@ -129,6 +129,7 @@ def test_apply():
     assert "match" not in rule.split("layer-rule")[0] and 'exclude app-id=r#"^kitty$"#' in rule, rule
     assert "background-effect { blur true; }" in rule, rule  # frosted like kitty's background_blur
     assert 'namespace="^themely-backdrop$"' in rule and "place-within-backdrop true" in rule, rule  # Mod+Tab only
+    assert 'namespace="^launcher$"\n    background-effect { blur true; }' in rule, rule  # fuzzel
     assert "background_opacity 0.8" in (cfg / "kitty/kitty.conf").read_text()
     assert "preset = x" in (cfg / "flowbar/config.ini").read_text()
     assert "background-color=" in (cfg / "mako/config").read_text()
